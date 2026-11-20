@@ -94,13 +94,14 @@ fun TasksScreen(
     var showFormSheet by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<StudyTask?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedPriorityFilter by remember { mutableStateOf<PriorityLevel?>(null) }
 
-    val filteredTasks = remember(tasks, searchQuery) {
+    val filteredTasks = remember(tasks, searchQuery, selectedPriorityFilter) {
         val query = searchQuery.trim()
-        if (query.isEmpty()) {
-            tasks
-        } else {
-            tasks.filter { it.title.contains(query, ignoreCase = true) }
+        tasks.filter { task ->
+            val matchesQuery = query.isEmpty() || task.title.contains(query, ignoreCase = true)
+            val matchesPriority = selectedPriorityFilter == null || task.priority == selectedPriorityFilter
+            matchesQuery && matchesPriority
         }
     }
 
@@ -140,6 +141,31 @@ fun TasksScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Selector de filtro por prioridad debajo de la barra de búsqueda
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val priorityOptions: List<Pair<PriorityLevel?, String>> = listOf(
+                null to "Todas",
+                PriorityLevel.ALTA to "Altas",
+                PriorityLevel.MEDIA to "Medias",
+                PriorityLevel.BAJA to "Bajas"
+            )
+            priorityOptions.forEach { (level, label) ->
+                FilterChip(
+                    selected = selectedPriorityFilter == level,
+                    onClick = { selectedPriorityFilter = level },
+                    label = { Text(label) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         if (filteredTasks.isEmpty()) {
@@ -156,18 +182,23 @@ fun TasksScreen(
                         .padding(24.dp)
                 ) {
                     Text(
-                        text = if (searchQuery.isNotBlank()) {
-                            "No se encontraron actividades con ese nombre"
+                        text = if (searchQuery.isNotBlank() || selectedPriorityFilter != null) {
+                            "No se encontraron actividades con esos filtros"
                         } else {
                             "No hay actividades registradas"
                         },
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (searchQuery.isNotBlank()) {
+                    if (searchQuery.isNotBlank() || selectedPriorityFilter != null) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = { searchQuery = "" }) {
-                            Text("Limpiar búsqueda")
+                        OutlinedButton(
+                            onClick = {
+                                searchQuery = ""
+                                selectedPriorityFilter = null
+                            }
+                        ) {
+                            Text("Limpiar filtros")
                         }
                     }
                 }

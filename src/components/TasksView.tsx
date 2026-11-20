@@ -28,6 +28,7 @@ interface TasksViewProps {
 }
 
 type TaskFilterTab = 'todas' | 'pendientes' | 'completadas';
+type PriorityFilterTab = 'Todas' | PriorityLevel;
 
 export function TasksView({
   todayIso,
@@ -41,6 +42,7 @@ export function TasksView({
   onCloseModal,
 }: TasksViewProps) {
   const [filter, setFilter] = useState<TaskFilterTab>('todas');
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilterTab>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -67,6 +69,10 @@ export function TasksView({
       if (filter === 'pendientes') return task.status === 'pendiente';
       if (filter === 'completadas') return task.status === 'completada';
       return true;
+    })
+    .filter((task) => {
+      if (priorityFilter === 'Todas') return true;
+      return (task.priority || 'Media') === priorityFilter;
     })
     .filter((task) => {
       if (!normalizedQuery) return true;
@@ -246,6 +252,47 @@ export function TasksView({
           )}
         </div>
 
+        {/* Selector de filtro por prioridad debajo de la barra de búsqueda */}
+        <div
+          className="grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5"
+          role="group"
+          aria-label="Filtrar actividades por prioridad"
+        >
+          {(
+            [
+              { id: 'Todas', label: 'Todas', dotClass: '' },
+              { id: 'Alta', label: 'Altas', dotClass: PRIORITY_STYLES.Alta.dotClass },
+              { id: 'Media', label: 'Medias', dotClass: PRIORITY_STYLES.Media.dotClass },
+              { id: 'Baja', label: 'Bajas', dotClass: PRIORITY_STYLES.Baja.dotClass },
+            ] as const
+          ).map((item) => {
+            const isSelected = priorityFilter === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => setPriorityFilter(item.id)}
+                className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl px-1.5 py-2 text-xs font-semibold transition-colors ${
+                  isSelected
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                {item.dotClass && (
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      isSelected ? 'bg-white' : item.dotClass
+                    }`}
+                    aria-hidden="true"
+                  />
+                )}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div
           className="grid grid-cols-3 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5"
           role="tablist"
@@ -410,17 +457,21 @@ export function TasksView({
           <p className="mt-1 text-sm text-slate-500">
             {tasks.length === 0
               ? 'Agrega tu primera actividad del curso para comenzar.'
-              : normalizedQuery
-              ? 'Prueba escribiendo otro nombre o limpia la búsqueda.'
-              : 'Cambia el filtro arriba o agrega una nueva actividad.'}
+              : normalizedQuery || priorityFilter !== 'Todas' || filter !== 'todas'
+              ? 'Prueba ajustando la búsqueda o los filtros.'
+              : 'Agrega una nueva actividad para comenzar.'}
           </p>
-          {normalizedQuery ? (
+          {normalizedQuery || priorityFilter !== 'Todas' || filter !== 'todas' ? (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                setPriorityFilter('Todas');
+                setFilter('todas');
+              }}
               className="mt-4 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
-              Limpiar búsqueda
+              Limpiar filtros
             </button>
           ) : (
             <button
